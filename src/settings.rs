@@ -1,6 +1,6 @@
+use anyhow::Result;
 use config::{Config, File};
 use serde::Deserialize;
-use anyhow::Result;
 use walkdir::WalkDir;
 
 use crate::operation::Operation;
@@ -8,8 +8,8 @@ use crate::operation::Operation;
 #[derive(Clone, Debug, Deserialize)]
 pub struct Service {
     pub name: String,
-    pub interval: u64,  /* milliseconds */
-    pub delta: u64,     /* milliseconds */
+    pub interval: u64, /* milliseconds */
+    pub delta: u64,    /* milliseconds */
     pub cycle: usize,
     pub bind: String,
     pub dest: String,
@@ -34,7 +34,7 @@ impl Settings {
                         .add_source(File::with_name("config/default/instance"))
                         .add_source(File::from(file.path()))
                         .build()?
-                        .try_deserialize()?
+                        .try_deserialize()?,
                 )
             }
         }

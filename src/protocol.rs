@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
-use tokio::net::UdpSocket;
 use anyhow::{anyhow, Result};
+use tokio::net::UdpSocket;
 use tracing::debug;
 
 const MESSAGE_LENGTH: usize = 16;
@@ -23,7 +23,9 @@ impl Message {
     }
 
     pub fn decode(buf: &[u8]) -> Result<Self> {
-        if buf.len() != MESSAGE_LENGTH { return Err(anyhow!("invalid data")) }
+        if buf.len() != MESSAGE_LENGTH {
+            return Err(anyhow!("invalid data"));
+        }
         let timestamp = u128::from_ne_bytes(buf[0..16].try_into()?);
         Ok(Self { timestamp })
     }
@@ -41,7 +43,11 @@ impl Socket {
     pub async fn send(&self, message: &Message, addr: SocketAddr) -> Result<()> {
         let buf = message.encode();
         self.socket.send_to(&buf[..], addr).await?;
-        debug!("{dest} <- {message:?}", dest = addr.to_string(), message = message);
+        debug!(
+            "{dest} <- {message:?}",
+            dest = addr.to_string(),
+            message = message
+        );
         Ok(())
     }
 
@@ -50,7 +56,11 @@ impl Socket {
         let (_, addr) = self.socket.recv_from(&mut buf).await?;
         let addr = purify_addr(addr);
         let message = Message::decode(&buf[..])?;
-        debug!("{src} -> {message:?}", src = addr.to_string(), message = message);
+        debug!(
+            "{src} -> {message:?}",
+            src = addr.to_string(),
+            message = message
+        );
         Ok((message, addr))
     }
 
@@ -59,7 +69,11 @@ impl Socket {
         let (_, addr) = self.socket.try_recv_from(&mut buf)?;
         let addr = purify_addr(addr);
         let message = Message::decode(&buf[..])?;
-        debug!("{src} -> {message:?}", src = addr.to_string(), message = message);
+        debug!(
+            "{src} -> {message:?}",
+            src = addr.to_string(),
+            message = message
+        );
         Ok((message, addr))
     }
 }

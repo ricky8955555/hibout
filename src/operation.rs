@@ -1,12 +1,12 @@
-use std::{fs::File, io::Write, process::Stdio, collections::HashMap};
+use std::{collections::HashMap, fs::File, io::Write, process::Stdio};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use tera::{Tera, Context};
-use tokio::{process::Command, io::AsyncWriteExt};
-use anyhow::Result;
-use tracing::{debug, info, error};
+use tera::{Context, Tera};
+use tokio::{io::AsyncWriteExt, process::Command};
+use tracing::{debug, error, info};
 
 use crate::service::Handler;
 
@@ -25,7 +25,11 @@ pub struct Conductor {
 }
 
 impl Conductor {
-    pub fn new(name: &str, operations: &[Operation], static_vars: HashMap<String, Box<dyn erased_serde::Serialize + Send + Sync>>) -> Self {
+    pub fn new(
+        name: &str,
+        operations: &[Operation],
+        static_vars: HashMap<String, Box<dyn erased_serde::Serialize + Send + Sync>>,
+    ) -> Self {
         Self {
             name: name.to_string(),
             operations: operations.to_vec(),
@@ -41,7 +45,12 @@ impl Conductor {
         );
 
         let mut child = Command::new(program).stdin(Stdio::piped()).spawn()?;
-        child.stdin.take().unwrap().write_all(cmd.as_bytes()).await?;
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(cmd.as_bytes())
+            .await?;
         child.wait().await?;
 
         Ok(())
@@ -60,9 +69,14 @@ impl Conductor {
         let result = tera.render(template, &Context::from_serialize(vars)?)?;
 
         let mut child = Command::new(program).stdin(Stdio::piped()).spawn()?;
-        child.stdin.take().unwrap().write_all(result.as_bytes()).await?;
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(result.as_bytes())
+            .await?;
         child.wait().await?;
-        
+
         Ok(())
     }
 
@@ -79,7 +93,11 @@ impl Conductor {
         let result = tera.render(template, &Context::from_serialize(vars)?)?;
         File::create(dest)?.write_all(result.as_bytes())?;
 
-        info!("wrote to {file} with {template} successfully", file = dest, template = template);
+        info!(
+            "wrote to {file} with {template} successfully",
+            file = dest,
+            template = template
+        );
         Ok(())
     }
 }
@@ -87,12 +105,19 @@ impl Conductor {
 #[async_trait]
 impl Handler for Conductor {
     async fn handle(&self, context: crate::service::Context) {
-        let mut vars: HashMap<String, &Box<dyn erased_serde::Serialize + Send + Sync>> = HashMap::from_iter(self.static_vars.iter().map(|(key, value)| (key.to_string(), value)));
+        let mut vars: HashMap<String, &Box<dyn erased_serde::Serialize + Send + Sync>> =
+            HashMap::from_iter(
+                self.static_vars
+                    .iter()
+                    .map(|(key, value)| (key.to_string(), value)),
+            );
 
         let loss = context.get_loss_count();
-        let loss_rate = Box::new(loss as f64 / context.cycle as f64) as Box<dyn erased_serde::Serialize + Send + Sync>;
+        let loss_rate = Box::new(loss as f64 / context.cycle as f64)
+            as Box<dyn erased_serde::Serialize + Send + Sync>;
         let loss = Box::new(loss) as Box<dyn erased_serde::Serialize + Send + Sync>;
-        let latencies = Box::new(context.latencies) as Box<dyn erased_serde::Serialize + Send + Sync>;
+        let latencies =
+            Box::new(context.latencies) as Box<dyn erased_serde::Serialize + Send + Sync>;
         let cycle = Box::new(context.cycle) as Box<dyn erased_serde::Serialize + Send + Sync>;
 
         vars.insert("loss".to_string(), &loss);
@@ -104,12 +129,18 @@ impl Handler for Conductor {
 
         for operation in &self.operations {
             if let Err(e) = match operation {
-                Operation::Cmd { cmd, program } => Self::run_cmd(&cmd, &program).await,
-                Operation::Script { template, program } => Self::run_script(&template, &program, &vars).await,
-                Operation::File { dest, template } => Self::write_file(&dest, &template, &vars).await,
+                Operation::Cmd { cmd, program } => Self::run_cmd(cmd, program).await,
+                Operation::Script { template, program } => {
+                    Self::run_script(template, program, &vars).await
+                }
+                Operation::File { dest, template } => Self::write_file(dest, template, &vars).await,
             } {
-                error!("{name} failed while conducting post operations. {error}", name = self.name, error = e);
-                return;  // immediately return if failed.
+                error!(
+                    "{name} failed while conducting post operations. {error}",
+                    name = self.name,
+                    error = e
+                );
+                return; // immediately return if failed.
             }
         }
     }

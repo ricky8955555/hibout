@@ -1,11 +1,20 @@
-use std::{time::{Duration, SystemTime}, net::SocketAddr, sync::Arc, cell::RefCell};
+use std::{
+    cell::RefCell,
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
-use async_trait::async_trait;
-use tokio::{net::UdpSocket, task, sync::{Mutex, mpsc}, time};
 use anyhow::Result;
-use tracing::{error, info, warn, debug};
+use async_trait::async_trait;
+use tokio::{
+    net::UdpSocket,
+    sync::{mpsc, Mutex},
+    task, time,
+};
+use tracing::{debug, error, info, warn};
 
-use crate::protocol::{Socket, Message};
+use crate::protocol::{Message, Socket};
 
 pub struct Service {
     pub name: String,
@@ -29,9 +38,7 @@ pub trait Handler {
 }
 
 impl Service {
-    pub fn new(
-        name: &str,
-    ) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             handlers: RefCell::new(vec![]),
@@ -47,8 +54,7 @@ impl Service {
         delta: Duration,
         cycle: usize,
         handler: impl Handler + Send + Sync + 'static,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         let socket = UdpSocket::bind(bind).await?;
         socket.bind_device(iface)?;
         let socket = Arc::new(Mutex::new(Socket::new(socket)));
@@ -74,9 +80,15 @@ impl Service {
         let handler = tokio::spawn(async move {
             loop {
                 if let Some(latencies) = rx.recv().await {
-                    let context = Context { latencies: latencies.clone(), cycle };
+                    let context = Context {
+                        latencies: latencies.clone(),
+                        cycle,
+                    };
                     handler.handle(context).await;
-                    debug!("{name} latencies was passed to post handler to handle", name = name);
+                    debug!(
+                        "{name} latencies was passed to post handler to handle",
+                        name = name
+                    );
                 }
             }
         });
@@ -101,7 +113,10 @@ impl Service {
             loop {
                 match time::timeout(timeout, rx.recv()).await {
                     Ok(Some((message, addr))) => {
-                        let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
+                        let timestamp = SystemTime::now()
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis();
                         let latency = match timestamp.checked_sub(message.timestamp) {
                             Some(num) => num,
                             None => {
@@ -109,11 +124,22 @@ impl Service {
                                 continue;
                             }
                         };
-                        info!("{name} ({addr}) -> latency: {lat} ms", name = name, addr = addr.to_string(), lat = latency);
+                        info!(
+                            "{name} ({addr}) -> latency: {lat} ms",
+                            name = name,
+                            addr = addr.to_string(),
+                            lat = latency
+                        );
                         latencies.push(latency);
-                    },
+                    }
                     Ok(None) => continue,
-                    Err(_) => { warn!("no package received from {name} ({addr}) within given duration", name = name, addr = dest.to_string()); },
+                    Err(_) => {
+                        warn!(
+                            "no package received from {name} ({addr}) within given duration",
+                            name = name,
+                            addr = dest.to_string()
+                        );
+                    }
                 }
 
                 counter += 1;
@@ -128,8 +154,13 @@ impl Service {
                         lost = cycle - count,
                         cycle = cycle,
                     );
-                    if let Err(ref e) = tx.send(latencies.clone()).await { error!("{error}", error = e) }
-                    debug!("{name} latencies was sent to post handling task to handle", name = name);
+                    if let Err(ref e) = tx.send(latencies.clone()).await {
+                        error!("{error}", error = e)
+                    }
+                    debug!(
+                        "{name} latencies was sent to post handling task to handle",
+                        name = name
+                    );
                     latencies.clear();
                     counter = 0;
                 }
@@ -139,15 +170,25 @@ impl Service {
         self.handlers.borrow_mut().push(handler);
     }
 
-    fn create_receiver(&self, socket: Arc<Mutex<Socket>>, tx: mpsc::Sender<(Message, SocketAddr)>, dest: SocketAddr) {
+    fn create_receiver(
+        &self,
+        socket: Arc<Mutex<Socket>>,
+        tx: mpsc::Sender<(Message, SocketAddr)>,
+        dest: SocketAddr,
+    ) {
         let handler = tokio::spawn(async move {
             loop {
                 if let Ok((message, addr)) = socket.lock().await.try_receive() {
                     if addr != dest {
-                        error!("received a message from unknown address {addr}, dropped", addr = addr.to_string());
+                        error!(
+                            "received a message from unknown address {addr}, dropped",
+                            addr = addr.to_string()
+                        );
                         continue;
                     }
-                    if let Err(ref e) = tx.send((message, addr)).await { error!("{error}", error = e) }
+                    if let Err(ref e) = tx.send((message, addr)).await {
+                        error!("{error}", error = e)
+                    }
                 }
             }
         });
@@ -160,9 +201,14 @@ impl Service {
             let mut interval = tokio::time::interval(interval);
             loop {
                 interval.tick().await;
-                let timestamp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
+                let timestamp = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
                 let message = Message { timestamp };
-                if let Err(ref e) = socket.lock().await.send(&message, addr).await { error!("{error}", error = e) }
+                if let Err(ref e) = socket.lock().await.send(&message, addr).await {
+                    error!("{error}", error = e)
+                }
             }
         });
 
