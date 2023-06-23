@@ -116,7 +116,7 @@ impl Handler for Conductor {
         vars.insert("latencies", &latencies);
         vars.insert("cycle", &cycle);
 
-        debug!("{} is conducting post operation", self.name);
+        debug!("{} is conducting operations", self.name);
 
         for operation in &self.operations {
             if let Err(e) = match operation {
@@ -127,11 +127,13 @@ impl Handler for Conductor {
                 Operation::File { dest, template } => Self::write_file(dest, template, &vars).await,
             } {
                 error!(
-                    "{} failed while conducting post operations. {}",
+                    "{} failed when conducting operations. {}",
                     self.name, e
                 );
                 return; // immediately return if failed.
             }
         }
+
+        info!("{} operations were successfully conducted", self.name);
     }
 }

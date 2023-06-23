@@ -78,7 +78,7 @@ impl Service {
             while let Some(latencies) = rx.recv().await {
                 let context = Context { latencies, cycle };
                 handler.handle(context).await;
-                debug!("{} latencies was passed to post handler to handle", name);
+                info!("{} latencies was passed to data handler to handle", name);
             }
         });
 
@@ -123,21 +123,14 @@ impl Service {
 
                 if counter == cycle {
                     let count = latencies.len();
-                    debug!(
+                    info!(
                         "{} counter reached cycle. received: {}, lost: {}, total: {}. latencies: {:?}.",
-                        name,
-                        count,
-                        cycle - count,
-                        cycle,
-                        latencies,
+                        name, count, cycle - count, cycle, latencies
                     );
                     if let Err(ref e) = tx.send(latencies.clone()).await {
                         error!("error occurred when data sending through mpsc: {}", e)
                     }
-                    debug!(
-                        "{} latencies was sent to post handling task to handle",
-                        name
-                    );
+                    debug!("{} latencies was sent to data handling task to handle", name);
                     latencies.clear();
                     counter = 0;
                 }
