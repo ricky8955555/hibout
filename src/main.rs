@@ -37,10 +37,9 @@ async fn main() -> Result<()> {
         let service = Service::new(&instance.name);
         let conductor = Conductor::new(&instance.name, &instance.operations, HashMap::new());
 
-        service
-            .run(
+        service.run(
                 parse_addr(&instance.bind)?,
-                Some(instance.iface.as_bytes()),
+                instance.iface.as_ref().map(|s| s.as_str()),
                 parse_addr(&instance.peer)?,
                 Duration::from_millis(instance.interval),
                 Duration::from_millis(instance.delta),

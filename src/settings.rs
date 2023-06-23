@@ -13,7 +13,7 @@ pub struct Service {
     pub cycle: usize,
     pub bind: String,
     pub peer: String,
-    pub iface: String,
+    pub iface: Option<String>,
     pub operations: Vec<Operation>,
 }
 

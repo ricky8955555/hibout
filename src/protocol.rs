@@ -34,9 +34,9 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub async fn connect(peer: SocketAddr, bind: SocketAddr, iface: Option<&[u8]>) -> Result<Self> {
+    pub async fn connect(peer: SocketAddr, bind: SocketAddr, iface: Option<&str>) -> Result<Self> {
         let socket = UdpSocket::bind(bind).await?;
-        socket.bind_device(iface)?;
+        socket.bind_device(iface.map(|s| s.as_bytes()))?;
         socket.connect(peer).await?;
         Ok(Self { socket, peer })
     }

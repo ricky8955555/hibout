@@ -1,4 +1,5 @@
 name: "(unnamed)"
+iface: null
 interval: 5000
 delta: 2000
 cycle: 30

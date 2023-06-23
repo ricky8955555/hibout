@@ -47,7 +47,7 @@ impl Service {
     pub async fn run(
         &self,
         bind: SocketAddr,
-        iface: Option<&[u8]>,
+        iface: Option<&str>,
         peer: SocketAddr,
         interval: Duration,
         delta: Duration,
