@@ -7,10 +7,7 @@ use std::{
 
 use anyhow::Result;
 use async_trait::async_trait;
-use tokio::{
-    sync::{mpsc, Mutex},
-    task, time,
-};
+use tokio::{sync::mpsc, task, time};
 use tracing::{debug, error, info, warn};
 
 use crate::protocol::{Message, Socket};
@@ -54,7 +51,7 @@ impl Service {
         cycle: usize,
         handler: impl Handler + Send + Sync + 'static,
     ) -> Result<()> {
-        let socket = Arc::new(Mutex::new(Socket::connect(peer, bind, iface).await?));
+        let socket = Arc::new(Socket::connect(peer, bind, iface).await?);
         let (tx, rx) = mpsc::channel(64);
         let (ptx, prx) = mpsc::channel(128);
 
@@ -128,7 +125,10 @@ impl Service {
                         name, count, cycle - count, cycle, latencies
                     );
                     if let Err(ref e) = tx.send(latencies.clone()).await {
-                        error!("error occurred when data sending through mpsc: {}", e)
+                        error!(
+                            "error occurred when data sending through mpsc to data handler: {}",
+                            e
+                        )
                     }
                     debug!(
                         "{} latencies was sent to data handling task to handle",
@@ -143,12 +143,17 @@ impl Service {
         self.handlers.borrow_mut().push(handler);
     }
 
-    fn create_receiver(&self, socket: Arc<Mutex<Socket>>, tx: mpsc::Sender<Message>) {
+    fn create_receiver(&self, socket: Arc<Socket>, tx: mpsc::Sender<Message>) {
         let handler = tokio::spawn(async move {
             loop {
-                if let Ok(message) = socket.lock().await.try_receive() {
-                    if let Err(ref e) = tx.send(message).await {
-                        error!("{error}", error = e)
+                match socket.receive().await {
+                    Ok(message) => {
+                        if let Err(ref e) = tx.send(message).await {
+                            error!("error occurred when sending data to income handler through mpsc: {}", e)
+                        }
+                    }
+                    Err(e) => {
+                        error!("failed to receive message to peer through socket: {}", e)
                     }
                 }
             }
@@ -157,7 +162,7 @@ impl Service {
         self.handlers.borrow_mut().push(handler);
     }
 
-    fn create_sender(&self, socket: Arc<Mutex<Socket>>, interval: Duration) {
+    fn create_sender(&self, socket: Arc<Socket>, interval: Duration) {
         let handler = tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval);
             loop {
@@ -167,8 +172,8 @@ impl Service {
                     .unwrap()
                     .as_millis();
                 let message = Message { timestamp };
-                if let Err(ref e) = socket.lock().await.send(&message).await {
-                    warn!("failed to send message through socket: {}", e)
+                if let Err(ref e) = socket.send(&message).await {
+                    warn!("failed to send message to peer through socket: {}", e)
                 }
             }
         });
