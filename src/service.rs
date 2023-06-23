@@ -115,7 +115,7 @@ impl Service {
                         let latency = match timestamp.checked_sub(message.timestamp) {
                             Some(num) => num,
                             None => {
-                                error!("received a timestamp later than local");
+                                error!("{name} received a timestamp later than local", name = name);
                                 continue;
                             }
                         };
@@ -150,7 +150,7 @@ impl Service {
                         cycle = cycle,
                     );
                     if let Err(ref e) = tx.send(latencies.clone()).await {
-                        error!("{error}", error = e)
+                        error!("error occurred when data sending through mspc: {error}", error = e)
                     }
                     debug!(
                         "{name} latencies was sent to post handling task to handle",
@@ -173,16 +173,22 @@ impl Service {
     ) {
         let handler = tokio::spawn(async move {
             loop {
-                if let Ok((message, addr)) = socket.lock().await.try_receive() {
-                    if addr != dest {
-                        error!(
-                            "received a message from unknown address {addr}, dropped",
-                            addr = addr.to_string()
-                        );
-                        continue;
+                match socket.lock().await.receive().await {
+                    Ok((message, addr)) => {
+                        if addr != dest {
+                            error!(
+                                "received a message from unknown address {addr}, dropped",
+                                addr = addr.to_string()
+                            );
+                            continue;
+                        }
+                        if let Err(ref e) = tx.send((message, addr)).await {
+                            error!("error occurred when data sending through mspc: {error}", error = e)
+                        }
                     }
-                    if let Err(ref e) = tx.send((message, addr)).await {
-                        error!("{error}", error = e)
+                    Err(e) => {
+                        error!("error occurred when receiving from socket: {error}", error = e);
+                        break;
                     }
                 }
             }
