@@ -81,10 +81,7 @@ impl Service {
             while let Some(latencies) = rx.recv().await {
                 let context = Context { latencies, cycle };
                 handler.handle(context).await;
-                debug!(
-                    "{name} latencies was passed to post handler to handle",
-                    name = name
-                );
+                debug!("{} latencies was passed to post handler to handle", name);
             }
         });
 
@@ -115,26 +112,19 @@ impl Service {
                         let latency = match timestamp.checked_sub(message.timestamp) {
                             Some(num) => num,
                             None => {
-                                error!("{name} received a timestamp later than local", name = name);
+                                error!("{} received a timestamp later than local", name);
                                 continue;
                             }
                         };
-                        info!(
-                            "{name} ({addr}) -> latency: {lat} ms",
-                            name = name,
-                            addr = addr.to_string(),
-                            lat = latency
-                        );
+                        info!("{} ({}) -> latency: {} ms", name, addr.to_string(), latency);
                         latencies.push(latency);
                     }
                     Ok(None) => break,
-                    Err(_) => {
-                        warn!(
-                            "no package received from {name} ({addr}) within given duration",
-                            name = name,
-                            addr = dest.to_string()
-                        );
-                    }
+                    Err(_) => warn!(
+                        "no package received from {} ({}) within given duration",
+                        name,
+                        dest.to_string()
+                    ),
                 }
 
                 counter += 1;
@@ -142,19 +132,19 @@ impl Service {
                 if counter == cycle {
                     let count = latencies.len();
                     debug!(
-                        "{name} counter reached cycle. received: {count}, lost: {lost}, total: {cycle}. latencies: {latencies:?}.",
-                        name = name,
-                        latencies = latencies,
-                        count = count,
-                        lost = cycle - count,
-                        cycle = cycle,
+                        "{} counter reached cycle. received: {}, lost: {}, total: {}. latencies: {:?}.",
+                        name,
+                        count,
+                        cycle - count,
+                        cycle,
+                        latencies,
                     );
                     if let Err(ref e) = tx.send(latencies.clone()).await {
-                        error!("error occurred when data sending through mspc: {error}", error = e)
+                        error!("error occurred when data sending through mspc: {}", e)
                     }
                     debug!(
-                        "{name} latencies was sent to post handling task to handle",
-                        name = name
+                        "{} latencies was sent to post handling task to handle",
+                        name
                     );
                     latencies.clear();
                     counter = 0;
@@ -177,17 +167,17 @@ impl Service {
                     Ok((message, addr)) => {
                         if addr != dest {
                             error!(
-                                "received a message from unknown address {addr}, dropped",
-                                addr = addr.to_string()
+                                "received a message from unknown address {}, dropped",
+                                addr.to_string()
                             );
                             continue;
                         }
                         if let Err(ref e) = tx.send((message, addr)).await {
-                            error!("error occurred when data sending through mspc: {error}", error = e)
+                            error!("error occurred when data sending through mspc: {}", e)
                         }
                     }
                     Err(e) => {
-                        error!("error occurred when receiving from socket: {error}", error = e);
+                        error!("error occurred when receiving from socket: {}", e);
                         break;
                     }
                 }
@@ -208,7 +198,7 @@ impl Service {
                     .as_millis();
                 let message = Message { timestamp };
                 if let Err(ref e) = socket.lock().await.send(&message, addr).await {
-                    error!("{error}", error = e)
+                    error!("error occurred when data sending through mspc: {}", e)
                 }
             }
         });

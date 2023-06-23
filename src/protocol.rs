@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
-use anyhow::{Result, bail};
-use serde::{Serialize, Deserialize};
+use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 use tokio::net::UdpSocket;
 use tracing::debug;
 
@@ -44,11 +44,7 @@ impl Socket {
     pub async fn send(&self, message: &Message, addr: SocketAddr) -> Result<()> {
         let buf = message.encode();
         self.socket.send_to(&buf[..], addr).await?;
-        debug!(
-            "{dest} <- {message:?}",
-            dest = addr.to_string(),
-            message = message
-        );
+        debug!("{} <- {:?}", addr.to_string(), message);
         Ok(())
     }
 
@@ -57,11 +53,7 @@ impl Socket {
         let (_, addr) = self.socket.recv_from(&mut buf).await?;
         let addr = purify_addr(addr);
         let message = Message::decode(&buf[..])?;
-        debug!(
-            "{src} -> {message:?}",
-            src = addr.to_string(),
-            message = message
-        );
+        debug!("{} -> {:?}", addr.to_string(), message);
         Ok((message, addr))
     }
 
@@ -70,11 +62,7 @@ impl Socket {
         let (_, addr) = self.socket.try_recv_from(&mut buf)?;
         let addr = purify_addr(addr);
         let message = Message::decode(&buf[..])?;
-        debug!(
-            "{src} -> {message:?}",
-            src = addr.to_string(),
-            message = message
-        );
+        debug!("{} -> {:?}", addr.to_string(), message);
         Ok((message, addr))
     }
 }

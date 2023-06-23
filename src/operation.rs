@@ -40,11 +40,7 @@ impl Conductor {
     }
 
     async fn run_cmd(cmd: &str, program: &str) -> Result<()> {
-        debug!(
-            "running command {cmd} via {program}",
-            cmd = cmd,
-            program = program,
-        );
+        debug!("running command {} via {}", cmd, program);
 
         let mut child = Command::new(program).stdin(Stdio::piped()).spawn()?;
         child
@@ -60,10 +56,10 @@ impl Conductor {
 
     async fn run_script(template: &str, program: &str, vars: impl Serialize) -> Result<()> {
         debug!(
-            "running script via {program} using template {template} with vars {vars:?}",
-            program = program,
-            template = template,
-            vars = serde_json::to_string(&vars).unwrap_or("(unknown)".to_string()),
+            "running script via {} using template {} with vars {:?}",
+            program,
+            template,
+            serde_json::to_string(&vars).unwrap_or("(unknown)".to_string()),
         );
 
         let mut tera = Tera::default();
@@ -84,10 +80,10 @@ impl Conductor {
 
     async fn write_file(dest: &str, template: &str, vars: impl Serialize) -> Result<()> {
         debug!(
-            "writing file {file} using template {template} with vars {vars:?}",
-            file = dest,
-            template = template,
-            vars = serde_json::to_string(&vars).unwrap_or("(unknown)".to_string()),
+            "writing file {} using template {} with vars {:?}",
+            dest,
+            template,
+            serde_json::to_string(&vars).unwrap_or("(unknown)".to_string()),
         );
 
         let mut tera = Tera::default();
@@ -95,11 +91,7 @@ impl Conductor {
         let result = tera.render(template, &Context::from_serialize(vars)?)?;
         File::create(dest)?.write_all(result.as_bytes())?;
 
-        info!(
-            "wrote to {file} with {template} successfully",
-            file = dest,
-            template = template
-        );
+        info!("wrote to {} with {} successfully", dest, template);
         Ok(())
     }
 }
@@ -124,7 +116,7 @@ impl Handler for Conductor {
         vars.insert("latencies", &latencies);
         vars.insert("cycle", &cycle);
 
-        debug!("{name} is conducting post operation", name = self.name);
+        debug!("{} is conducting post operation", self.name);
 
         for operation in &self.operations {
             if let Err(e) = match operation {
@@ -135,9 +127,8 @@ impl Handler for Conductor {
                 Operation::File { dest, template } => Self::write_file(dest, template, &vars).await,
             } {
                 error!(
-                    "{name} failed while conducting post operations. {error}",
-                    name = self.name,
-                    error = e
+                    "{} failed while conducting post operations. {}",
+                    self.name, e
                 );
                 return; // immediately return if failed.
             }
