@@ -132,7 +132,7 @@ impl Service {
                         latencies,
                     );
                     if let Err(ref e) = tx.send(latencies.clone()).await {
-                        error!("error occurred when data sending through mspc: {}", e)
+                        error!("error occurred when data sending through mpsc: {}", e)
                     }
                     debug!(
                         "{} latencies was sent to post handling task to handle",
@@ -172,7 +172,7 @@ impl Service {
                     .as_millis();
                 let message = Message { timestamp };
                 if let Err(ref e) = socket.lock().await.send(&message).await {
-                    error!("error occurred when data sending through mspc: {}", e)
+                    warn!("failed to send message through socket: {}", e)
                 }
             }
         });
