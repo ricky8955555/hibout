@@ -61,8 +61,8 @@ impl Service {
         let (tx, rx) = mpsc::channel::<(Message, SocketAddr)>(64);
         let (ptx, prx) = mpsc::channel::<Vec<u128>>(128);
 
-        self.create_receiver(Arc::clone(&socket), tx, dest);
-        self.create_sender(Arc::clone(&socket), interval, dest);
+        self.create_receiver(socket.clone(), tx, dest);
+        self.create_sender(socket.clone(), interval, dest);
         self.create_income_handler(rx, ptx, cycle, interval + delta, dest);
         self.create_data_handler(prx, cycle, handler);
 
