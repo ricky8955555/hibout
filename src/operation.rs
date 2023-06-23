@@ -10,7 +10,7 @@ use tracing::{debug, error, info};
 
 use crate::service::Handler;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Operation {
     Cmd { cmd: String, program: String },
@@ -18,17 +18,19 @@ pub enum Operation {
     File { dest: String, template: String },
 }
 
+pub type VarValue = Box<dyn erased_serde::Serialize + Send + Sync>;
+
 pub struct Conductor {
     name: String,
     operations: Vec<Operation>,
-    static_vars: HashMap<String, Box<dyn erased_serde::Serialize + Send + Sync>>,
+    static_vars: HashMap<String, VarValue>,
 }
 
 impl Conductor {
     pub fn new(
         name: &str,
         operations: &[Operation],
-        static_vars: HashMap<String, Box<dyn erased_serde::Serialize + Send + Sync>>,
+        static_vars: HashMap<String, VarValue>,
     ) -> Self {
         Self {
             name: name.to_string(),
@@ -105,25 +107,22 @@ impl Conductor {
 #[async_trait]
 impl Handler for Conductor {
     async fn handle(&self, context: crate::service::Context) {
-        let mut vars: HashMap<String, &Box<dyn erased_serde::Serialize + Send + Sync>> =
-            HashMap::from_iter(
-                self.static_vars
-                    .iter()
-                    .map(|(key, value)| (key.to_string(), value)),
-            );
+        let mut vars: HashMap<&str, &VarValue> = HashMap::from_iter(
+            self.static_vars
+                .iter()
+                .map(|(key, value)| (key.as_str(), value)),
+        );
 
         let loss = context.get_loss_count();
-        let loss_rate = Box::new(loss as f64 / context.cycle as f64)
-            as Box<dyn erased_serde::Serialize + Send + Sync>;
-        let loss = Box::new(loss) as Box<dyn erased_serde::Serialize + Send + Sync>;
-        let latencies =
-            Box::new(context.latencies) as Box<dyn erased_serde::Serialize + Send + Sync>;
-        let cycle = Box::new(context.cycle) as Box<dyn erased_serde::Serialize + Send + Sync>;
+        let loss_rate = Box::new(loss as f64 / context.cycle as f64) as VarValue;
+        let loss = Box::new(loss) as VarValue;
+        let latencies = Box::new(context.latencies) as VarValue;
+        let cycle = Box::new(context.cycle) as VarValue;
 
-        vars.insert("loss".to_string(), &loss);
-        vars.insert("loss_rate".to_string(), &loss_rate);
-        vars.insert("latencies".to_string(), &latencies);
-        vars.insert("cycle".to_string(), &cycle);
+        vars.insert("loss", &loss);
+        vars.insert("loss_rate", &loss_rate);
+        vars.insert("latencies", &latencies);
+        vars.insert("cycle", &cycle);
 
         debug!("{name} is conducting post operation", name = self.name);
 

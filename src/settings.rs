@@ -1,11 +1,11 @@
 use anyhow::Result;
 use config::{Config, File};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
 use crate::operation::Operation;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Service {
     pub name: String,
     pub interval: u64, /* milliseconds */
@@ -17,7 +17,7 @@ pub struct Service {
     pub operations: Vec<Operation>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub instances: Vec<Service>,
 }
