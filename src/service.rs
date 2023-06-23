@@ -79,10 +79,7 @@ impl Service {
 
         let handler = tokio::spawn(async move {
             while let Some(latencies) = rx.recv().await {
-                let context = Context {
-                    latencies: latencies.clone(),
-                    cycle,
-                };
+                let context = Context { latencies, cycle };
                 handler.handle(context).await;
                 debug!(
                     "{name} latencies was passed to post handler to handle",
