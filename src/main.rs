@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::Result;
 use hibout::{operation::Conductor, service::Service, settings::Settings};
+use tokio::time;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 fn parse_addr(addr: &str) -> Result<SocketAddr> {
@@ -50,5 +51,7 @@ async fn main() -> Result<()> {
         services.push(service);
     }
 
-    loop {}
+    loop {
+        time::sleep(Duration::from_secs(10)).await;
+    }
 }
