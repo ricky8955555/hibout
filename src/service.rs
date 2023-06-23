@@ -58,8 +58,8 @@ impl Service {
         let socket = UdpSocket::bind(bind).await?;
         socket.bind_device(iface)?;
         let socket = Arc::new(Mutex::new(Socket::new(socket)));
-        let (tx, rx) = mpsc::channel::<(Message, SocketAddr)>(64);
-        let (ptx, prx) = mpsc::channel::<Vec<u128>>(128);
+        let (tx, rx) = mpsc::channel(64);
+        let (ptx, prx) = mpsc::channel(128);
 
         self.create_receiver(socket.clone(), tx, dest);
         self.create_sender(socket.clone(), interval, dest);
