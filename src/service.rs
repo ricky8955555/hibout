@@ -150,15 +150,9 @@ impl Service {
     fn create_receiver(&self, socket: Arc<Mutex<Socket>>, tx: mpsc::Sender<Message>) {
         let handler = tokio::spawn(async move {
             loop {
-                match socket.lock().await.receive().await {
-                    Ok(message) => {
-                        if let Err(ref e) = tx.send(message).await {
-                            error!("error occurred when data sending through mspc: {}", e)
-                        }
-                    }
-                    Err(e) => {
-                        error!("error occurred when receiving from socket: {}", e);
-                        break;
+                if let Ok(message) = socket.lock().await.try_receive() {
+                    if let Err(ref e) = tx.send(message).await {
+                        error!("{error}", error = e)
                     }
                 }
             }
