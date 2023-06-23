@@ -78,18 +78,16 @@ impl Service {
         let name = self.name.clone();
 
         let handler = tokio::spawn(async move {
-            loop {
-                if let Some(latencies) = rx.recv().await {
-                    let context = Context {
-                        latencies: latencies.clone(),
-                        cycle,
-                    };
-                    handler.handle(context).await;
-                    debug!(
-                        "{name} latencies was passed to post handler to handle",
-                        name = name
-                    );
-                }
+            while let Some(latencies) = rx.recv().await {
+                let context = Context {
+                    latencies: latencies.clone(),
+                    cycle,
+                };
+                handler.handle(context).await;
+                debug!(
+                    "{name} latencies was passed to post handler to handle",
+                    name = name
+                );
             }
         });
 
@@ -132,7 +130,7 @@ impl Service {
                         );
                         latencies.push(latency);
                     }
-                    Ok(None) => continue,
+                    Ok(None) => break,
                     Err(_) => {
                         warn!(
                             "no package received from {name} ({addr}) within given duration",
