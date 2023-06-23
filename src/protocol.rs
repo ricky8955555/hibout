@@ -7,10 +7,6 @@ use tracing::debug;
 
 const MESSAGE_LENGTH: usize = 16;
 
-fn purify_addr(addr: SocketAddr) -> SocketAddr {
-    SocketAddr::new(addr.ip(), addr.port())
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Clone, Hash)]
 pub struct Message {
     pub timestamp: u128,
@@ -34,35 +30,37 @@ impl Message {
 
 pub struct Socket {
     socket: UdpSocket,
+    peer: SocketAddr,
 }
 
 impl Socket {
-    pub fn new(socket: UdpSocket) -> Self {
-        Self { socket }
+    pub async fn connect(peer: SocketAddr, bind: SocketAddr, iface: Option<&[u8]>) -> Result<Self> {
+        let socket = UdpSocket::bind(bind).await?;
+        socket.bind_device(iface)?;
+        socket.connect(peer).await?;
+        Ok(Self { socket, peer })
     }
 
-    pub async fn send(&self, message: &Message, addr: SocketAddr) -> Result<()> {
+    pub async fn send(&self, message: &Message) -> Result<()> {
         let buf = message.encode();
-        self.socket.send_to(&buf[..], addr).await?;
-        debug!("{} <- {:?}", addr.to_string(), message);
+        self.socket.send(&buf[..]).await?;
+        debug!("{} <- {:?}", self.peer.to_string(), message);
         Ok(())
     }
 
-    pub async fn receive(&self) -> Result<(Message, SocketAddr)> {
+    pub async fn receive(&self) -> Result<Message> {
         let mut buf = [0; MESSAGE_LENGTH];
-        let (_, addr) = self.socket.recv_from(&mut buf).await?;
-        let addr = purify_addr(addr);
+        let _ = self.socket.recv(&mut buf).await?;
         let message = Message::decode(&buf[..])?;
-        debug!("{} -> {:?}", addr.to_string(), message);
-        Ok((message, addr))
+        debug!("{} -> {:?}", self.peer.to_string(), message);
+        Ok(message)
     }
 
-    pub fn try_receive(&self) -> Result<(Message, SocketAddr)> {
+    pub fn try_receive(&self) -> Result<Message> {
         let mut buf = [0; MESSAGE_LENGTH];
-        let (_, addr) = self.socket.try_recv_from(&mut buf)?;
-        let addr = purify_addr(addr);
+        let _ = self.socket.try_recv(&mut buf)?;
         let message = Message::decode(&buf[..])?;
-        debug!("{} -> {:?}", addr.to_string(), message);
-        Ok((message, addr))
+        debug!("{} -> {:?}", self.peer.to_string(), message);
+        Ok(message)
     }
 }
