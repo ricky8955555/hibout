@@ -19,7 +19,7 @@ pub struct Message {
 impl Message {
     pub fn encode(&self) -> Vec<u8> {
         let mut encoded: Vec<u8> = vec![];
-        encoded.extend_from_slice(&self.timestamp.to_ne_bytes());
+        encoded.extend_from_slice(&self.timestamp.to_be_bytes());
         encoded
     }
 
@@ -27,7 +27,7 @@ impl Message {
         if buf.len() != MESSAGE_LENGTH {
             bail!("invalid data");
         }
-        let timestamp = u128::from_ne_bytes(buf[0..16].try_into()?);
+        let timestamp = u128::from_be_bytes(buf[0..16].try_into()?);
         Ok(Self { timestamp })
     }
 }
