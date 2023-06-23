@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
         service
             .run(
                 parse_addr(&instance.bind)?,
-                instance.iface.as_ref().map(|s| s.as_str()),
+                instance.iface.as_deref(),
                 parse_addr(&instance.peer)?,
                 Duration::from_millis(instance.interval),
                 Duration::from_millis(instance.delta),
