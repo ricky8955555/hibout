@@ -12,7 +12,7 @@ pub struct Service {
     pub delta: u64,    /* milliseconds */
     pub cycle: usize,
     pub bind: String,
-    pub dest: String,
+    pub peer: String,
     pub iface: String,
     pub operations: Vec<Operation>,
 }

@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
             .run(
                 parse_addr(&instance.bind)?,
                 Some(instance.iface.as_bytes()),
-                parse_addr(&instance.dest)?,
+                parse_addr(&instance.peer)?,
                 Duration::from_millis(instance.interval),
                 Duration::from_millis(instance.delta),
                 instance.cycle,
