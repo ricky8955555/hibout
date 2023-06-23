@@ -130,7 +130,10 @@ impl Service {
                     if let Err(ref e) = tx.send(latencies.clone()).await {
                         error!("error occurred when data sending through mpsc: {}", e)
                     }
-                    debug!("{} latencies was sent to data handling task to handle", name);
+                    debug!(
+                        "{} latencies was sent to data handling task to handle",
+                        name
+                    );
                     latencies.clear();
                     counter = 0;
                 }

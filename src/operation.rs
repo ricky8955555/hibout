@@ -51,6 +51,7 @@ impl Conductor {
             .await?;
         child.wait().await?;
 
+        info!("ran command {} via {} successfully", cmd, program);
         Ok(())
     }
 
@@ -75,6 +76,10 @@ impl Conductor {
             .await?;
         child.wait().await?;
 
+        info!(
+            "ran command script via {} using template {} successfully",
+            program, template
+        );
         Ok(())
     }
 
@@ -126,10 +131,7 @@ impl Handler for Conductor {
                 }
                 Operation::File { dest, template } => Self::write_file(dest, template, &vars).await,
             } {
-                error!(
-                    "{} failed when conducting operations. {}",
-                    self.name, e
-                );
+                error!("{} failed when conducting operations. {}", self.name, e);
                 return; // immediately return if failed.
             }
         }
