@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use anyhow::{anyhow, Result};
+use serde::{Serialize, Deserialize};
 use tokio::net::UdpSocket;
 use tracing::debug;
 
@@ -10,7 +11,7 @@ fn purify_addr(addr: SocketAddr) -> SocketAddr {
     SocketAddr::new(addr.ip(), addr.port())
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Clone, Hash)]
 pub struct Message {
     pub timestamp: u128,
 }
