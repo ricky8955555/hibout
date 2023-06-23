@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, bail};
 use serde::{Serialize, Deserialize};
 use tokio::net::UdpSocket;
 use tracing::debug;
@@ -25,7 +25,7 @@ impl Message {
 
     pub fn decode(buf: &[u8]) -> Result<Self> {
         if buf.len() != MESSAGE_LENGTH {
-            return Err(anyhow!("invalid data"));
+            bail!("invalid data");
         }
         let timestamp = u128::from_ne_bytes(buf[0..16].try_into()?);
         Ok(Self { timestamp })
